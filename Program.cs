@@ -1,5 +1,6 @@
 using wt_lab6_6minimalapi_valkovich.Models;
 using wt_lab6_6minimalapi_valkovich.Data;
+using Microsoft.AspNetCore.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
