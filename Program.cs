@@ -1,23 +1,32 @@
 using wt_lab6_6minimalapi_valkovich.Models;
 using wt_lab6_6minimalapi_valkovich.Data;
-using Microsoft.AspNetCore.OpenApi;
+using Microsoft.OpenApi.Models; // Пространство имен для Swashbuckle
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Настройка OpenAPI (для документации)
-builder.Services.AddOpenApi();
+// 1. Подключаем Swagger (Swashbuckle)
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Library API", Version = "v1" });
+});
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+// 2. Включаем Swagger UI (графический интерфейс)
+if (app.Environment.IsDevelopment() || true) // Можно оставить true, чтобы видеть Swagger и на Render
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Library API V1");
+    });
 }
 
-// 1 уровень: базовый GET
+// --- Ваши endpoint'ы остаются без изменений ---
+
 app.MapGet("/", () => "Minimal API работает!");
 
-// 3 уровень: GET /api/info с возвратом JSON
 app.MapGet("/api/info", () =>
 {
     return new
@@ -28,7 +37,6 @@ app.MapGet("/api/info", () =>
     };
 });
 
-// GET: список всех книг + поиск (query-параметр search)
 app.MapGet("/api/books", (string? search) =>
 {
     var books = BookStore.Books.AsEnumerable();
@@ -39,7 +47,6 @@ app.MapGet("/api/books", (string? search) =>
     return Results.Ok(books);
 });
 
-// GET: книга по ID
 app.MapGet("/api/books/{id}", (int id) =>
 {
     var book = BookStore.Books.FirstOrDefault(x => x.Id == id);
@@ -47,7 +54,6 @@ app.MapGet("/api/books/{id}", (int id) =>
     return Results.Ok(book);
 });
 
-// POST: создание книги (с проверкой на 400 Bad Request)
 app.MapPost("/api/books", (Book book) =>
 {
     if (string.IsNullOrWhiteSpace(book.Title))
@@ -59,7 +65,6 @@ app.MapPost("/api/books", (Book book) =>
     return Results.Created($"/api/books/{book.Id}", book);
 });
 
-// PUT: обновление книги
 app.MapPut("/api/books/{id}", (int id, Book updatedBook) =>
 {
     var book = BookStore.Books.FirstOrDefault(x => x.Id == id);
@@ -73,14 +78,13 @@ app.MapPut("/api/books/{id}", (int id, Book updatedBook) =>
     return Results.Ok(book);
 });
 
-// DELETE: удаление книги
 app.MapDelete("/api/books/{id}", (int id) =>
 {
     var book = BookStore.Books.FirstOrDefault(x => x.Id == id);
     if (book == null) return Results.NotFound();
 
     BookStore.Books.Remove(book);
-    return Results.NoContent(); // 204 No Content
+    return Results.NoContent();
 });
 
 // Запуск с поддержкой порта Render
