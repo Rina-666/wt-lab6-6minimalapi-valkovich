@@ -1,4 +1,4 @@
-using wt_lab6_6minimalapi_valkovich.Models;
+п»їusing wt_lab6_6minimalapi_valkovich.Models;
 
 namespace wt_lab6_6minimalapi_valkovich.Data;
 
@@ -6,10 +6,10 @@ public static class BookStore
 {
     public static List<Book> Books { get; } = new()
     {
-        new Book { Id = 1, Title = "Гордость и предубеждение", Author = "Джейн Остин", Price = 890, IsAvailable = true },
-        new Book { Id = 2, Title = "Джейн Эйр", Author = "Шарлотта Бронте", Price = 750, IsAvailable = true },
-        new Book { Id = 3, Title = "1984", Author = "Джордж Оруэлл", Price = 350, IsAvailable = true },
-        new Book { Id = 4, Title = "Мастер и Маргарита", Author = "Михаил Булгаков", Price = 920, IsAvailable = false },
-        new Book { Id = 5, Title = "Гарри Поттер", Author = "Дж. К. Роулинг", Price = 1100, IsAvailable = true }
+        new Book { Id = 1, Title = "Р“РѕСЂРґРѕСЃС‚СЊ Рё РїСЂРµРґСѓР±РµР¶РґРµРЅРёРµ", Author = "Р”Р¶РµР№РЅ РћСЃС‚РёРЅ", Price = 890, IsAvailable = true },
+        new Book { Id = 2, Title = "Р”Р¶РµР№РЅ Р­Р№СЂ", Author = "РЁР°СЂР»РѕС‚С‚Р° Р‘СЂРѕРЅС‚Рµ", Price = 750, IsAvailable = true },
+        new Book { Id = 3, Title = "1984", Author = "Р”Р¶РѕСЂРґР¶ РћСЂСѓСЌР»Р»", Price = 350, IsAvailable = true },
+        new Book { Id = 4, Title = "РњР°СЃС‚РµСЂ Рё РњР°СЂРіР°СЂРёС‚Р°", Author = "РњРёС…Р°РёР» Р‘СѓР»РіР°РєРѕРІ", Price = 920, IsAvailable = false },
+        new Book { Id = 5, Title = "Р“Р°СЂСЂРё РџРѕС‚С‚РµСЂ", Author = "Р”Р¶. Рљ. Р РѕСѓР»РёРЅРі", Price = 1100, IsAvailable = true }
     };
 }

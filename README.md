@@ -1,16 +1,16 @@
-# WT-6 Minimal API (Библиотека)
+п»ї# WT-6 Minimal API (Р‘РёР±Р»РёРѕС‚РµРєР°)
 
-## Ссылки
+## РЎСЃС‹Р»РєРё
 - **GitHub:** https://github.com/Rina-666/wt-lab6-6minimalapi-valkovich
 - **Render:** https://wt-lab6-6minimalapi-valkovich.onrender.com
 
 ## API Endpoints
-| Метод | URL | Назначение |
+| РњРµС‚РѕРґ | URL | РќР°Р·РЅР°С‡РµРЅРёРµ |
 |-------|-----|------------|
-| GET | `/` | Проверка работы |
-| GET | `/api/info` | Информация о приложении |
-| GET | `/api/books` | Список книг (query: `?search=`) |
-| GET | `/api/books/{id}` | Книга по ID |
-| POST | `/api/books` | Создать книгу |
-| PUT | `/api/books/{id}` | Обновить книгу |
-| DELETE | `/api/books/{id}` | Удалить книгу |
+| GET | `/` | РџСЂРѕРІРµСЂРєР° СЂР°Р±РѕС‚С‹ |
+| GET | `/api/info` | РРЅС„РѕСЂРјР°С†РёСЏ Рѕ РїСЂРёР»РѕР¶РµРЅРёРё |
+| GET | `/api/books` | РЎРїРёСЃРѕРє РєРЅРёРі (query: `?search=`) |
+| GET | `/api/books/{id}` | РљРЅРёРіР° РїРѕ ID |
+| POST | `/api/books` | РЎРѕР·РґР°С‚СЊ РєРЅРёРіСѓ |
+| PUT | `/api/books/{id}` | РћР±РЅРѕРІРёС‚СЊ РєРЅРёРіСѓ |
+| DELETE | `/api/books/{id}` | РЈРґР°Р»РёС‚СЊ РєРЅРёРіСѓ |

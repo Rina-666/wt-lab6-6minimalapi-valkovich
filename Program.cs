@@ -1,20 +1,20 @@
-using wt_lab6_6minimalapi_valkovich.Models;
+п»їusing wt_lab6_6minimalapi_valkovich.Models;
 using wt_lab6_6minimalapi_valkovich.Data;
-using Microsoft.AspNetCore.OpenApi; // Обязательно для AddOpenApi/MapOpenApi
+using Microsoft.AspNetCore.OpenApi; // РћР±СЏР·Р°С‚РµР»СЊРЅРѕ РґР»СЏ AddOpenApi/MapOpenApi
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Используем встроенный OpenAPI для .NET 9
+// РСЃРїРѕР»СЊР·СѓРµРј РІСЃС‚СЂРѕРµРЅРЅС‹Р№ OpenAPI РґР»СЏ .NET 9
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Включаем документацию всегда (и локально, и на Render)
+// Р’РєР»СЋС‡Р°РµРј РґРѕРєСѓРјРµРЅС‚Р°С†РёСЋ РІСЃРµРіРґР° (Рё Р»РѕРєР°Р»СЊРЅРѕ, Рё РЅР° Render)
 app.MapOpenApi();
 
-// --- Ваши endpoint'ы ---
+// --- Р’Р°С€Рё endpoint'С‹ ---
 
-app.MapGet("/", () => "Minimal API работает!");
+app.MapGet("/", () => "Minimal API СЂР°Р±РѕС‚Р°РµС‚!");
 
 app.MapGet("/api/info", () =>
 {
@@ -46,7 +46,7 @@ app.MapGet("/api/books/{id}", (int id) =>
 app.MapPost("/api/books", (Book book) =>
 {
     if (string.IsNullOrWhiteSpace(book.Title))
-        return Results.BadRequest("Название книги не может быть пустым");
+        return Results.BadRequest("РќР°Р·РІР°РЅРёРµ РєРЅРёРіРё РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј");
 
     book.Id = BookStore.Books.Any() ? BookStore.Books.Max(x => x.Id) + 1 : 1;
     BookStore.Books.Add(book);
@@ -76,6 +76,6 @@ app.MapDelete("/api/books/{id}", (int id) =>
     return Results.NoContent();
 });
 
-// Запуск с поддержкой порта Render
+// Р—Р°РїСѓСЃРє СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РїРѕСЂС‚Р° Render
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 app.Run($"http://0.0.0.0:{port}");
