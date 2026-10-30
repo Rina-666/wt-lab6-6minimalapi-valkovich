@@ -1,29 +1,18 @@
 using wt_lab6_6minimalapi_valkovich.Models;
 using wt_lab6_6minimalapi_valkovich.Data;
-using Microsoft.OpenApi.Models; // Пространство имен для Swashbuckle
+using Microsoft.AspNetCore.OpenApi; // Обязательно для AddOpenApi/MapOpenApi
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Подключаем Swagger (Swashbuckle)
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Library API", Version = "v1" });
-});
+// Используем встроенный OpenAPI для .NET 9
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// 2. Включаем Swagger UI (графический интерфейс)
-if (app.Environment.IsDevelopment() || true) // Можно оставить true, чтобы видеть Swagger и на Render
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Library API V1");
-    });
-}
+// Включаем документацию всегда (и локально, и на Render)
+app.MapOpenApi();
 
-// --- Ваши endpoint'ы остаются без изменений ---
+// --- Ваши endpoint'ы ---
 
 app.MapGet("/", () => "Minimal API работает!");
 
