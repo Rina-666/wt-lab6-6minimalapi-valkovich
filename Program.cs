@@ -24,9 +24,9 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    // Создаем строку подключения в формате Key=Value (Npgsql не любит URL)
+    // КРИТИЧЕСКИ ВАЖНО: GssEncryptionMode=Disable решает проблему падения на Linux-контейнере Render
     connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
-                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;";
+                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;GssEncryptionMode=Disable;";
 }
 
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -34,7 +34,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new Exception("Строка подключения не найдена!");
 }
 
-// --- КРИТИЧЕСКИ ВАЖНО: Ограничиваем пул соединений до 1 ---
+// --- Ограничиваем пул соединений до 1 для экономии памяти ---
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.ConnectionStringBuilder.MaxPoolSize = 1;
 dataSourceBuilder.ConnectionStringBuilder.MinPoolSize = 1;
@@ -46,7 +46,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// --- 2. Применение миграций (с защитой от падения) ---
+// --- 2. Применение миграций с повторными попытками ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -70,7 +70,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// --- 3. REST API (без изменений) ---
+// --- 3. REST API ---
 app.MapGet("/", () => "Minimal API работает!");
 app.MapGet("/api/info", () => new { Application = "Web Technologies", Version = "7.0" });
 
@@ -118,6 +118,7 @@ app.MapDelete("/api/books/{id}", async (int id, AppDbContext db) =>
     return Results.NoContent();
 });
 
+// --- 4. LINQ-запросы ---
 app.MapGet("/api/books/expensive", async (AppDbContext db) =>
     Results.Ok(await db.Books.Where(x => x.Price > 500).ToListAsync()));
 app.MapGet("/api/books/sorted", async (AppDbContext db) =>
