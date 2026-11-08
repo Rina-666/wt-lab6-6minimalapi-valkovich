@@ -3,7 +3,7 @@ using wt_lab7_7postgres_efcore_valkovich.Data;
 using wt_lab7_7postgres_efcore_valkovich.Models;
 using System;
 
-// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ (для бесплатного Render 512MB) ---
+// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ ---
 AppContext.SetSwitch("System.GC.Server", false);
 AppContext.SetSwitch("System.GC.Concurrent", false);
 AppContext.SetSwitch("System.GC.HeapHardLimit", true);
@@ -16,18 +16,16 @@ var databaseUrl = builder.Configuration["DATABASE_URL"];
 
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    // Render может выдавать ссылку с префиксом postgres://, заменяем на postgresql://
     if (databaseUrl.StartsWith("postgres://"))
     {
         databaseUrl = databaseUrl.Replace("postgres://", "postgresql://");
     }
-
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    // Максимально простая строка подключения без SSL и лишних проверок
+    // Maximum Pool Size=1 - критически важно для экономии памяти на Render
     connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
-                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;";
+                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;Maximum Pool Size=1;";
 }
 
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -35,15 +33,13 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new Exception("Строка подключения не найдена!");
 }
 
-// Отключаем логирование SQL-запросов для экономии памяти
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString)
-           .LogTo(Console.WriteLine, LogLevel.Warning) // Логируем только ошибки
 );
 
 var app = builder.Build();
 
-// --- 2. Применение миграций с повторными попытками ---
+// --- 2. Применение миграций ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -72,7 +68,6 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/", () => "Minimal API работает!");
 app.MapGet("/api/info", () => new { Application = "Web Technologies", Version = "7.0" });
 
-// GET: Все книги + поиск
 app.MapGet("/api/books", async (string? search, AppDbContext db) =>
 {
     var query = db.Books.AsQueryable();
@@ -83,14 +78,12 @@ app.MapGet("/api/books", async (string? search, AppDbContext db) =>
     return Results.Ok(await query.ToListAsync());
 });
 
-// GET: Книга по ID
 app.MapGet("/api/books/{id}", async (int id, AppDbContext db) =>
 {
     var book = await db.Books.FirstOrDefaultAsync(x => x.Id == id);
     return book == null ? Results.NotFound() : Results.Ok(book);
 });
 
-// POST: Создание
 app.MapPost("/api/books", async (Book book, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(book.Title))
@@ -101,7 +94,6 @@ app.MapPost("/api/books", async (Book book, AppDbContext db) =>
     return Results.Created($"/api/books/{book.Id}", book);
 });
 
-// PUT: Обновление
 app.MapPut("/api/books/{id}", async (int id, Book updatedBook, AppDbContext db) =>
 {
     var book = await db.Books.FirstOrDefaultAsync(x => x.Id == id);
@@ -116,7 +108,6 @@ app.MapPut("/api/books/{id}", async (int id, Book updatedBook, AppDbContext db) 
     return Results.Ok(book);
 });
 
-// DELETE: Удаление
 app.MapDelete("/api/books/{id}", async (int id, AppDbContext db) =>
 {
     var book = await db.Books.FirstOrDefaultAsync(x => x.Id == id);
