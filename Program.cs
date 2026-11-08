@@ -3,9 +3,10 @@ using wt_lab7_7postgres_efcore_valkovich.Data;
 using wt_lab7_7postgres_efcore_valkovich.Models;
 using System;
 
-// --- 0. Оптимизация памяти для бесплатного тарифа Render ---
+// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ (для бесплатного Render 512MB) ---
 AppContext.SetSwitch("System.GC.Server", false);
 AppContext.SetSwitch("System.GC.Concurrent", false);
+AppContext.SetSwitch("System.GC.HeapHardLimit", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,17 +16,18 @@ var databaseUrl = builder.Configuration["DATABASE_URL"];
 
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    // Исправляем префикс, если Render выдал его в формате postgres://
+    // Render может выдавать ссылку с префиксом postgres://, заменяем на postgresql://
     if (databaseUrl.StartsWith("postgres://"))
     {
         databaseUrl = databaseUrl.Replace("postgres://", "postgresql://");
     }
+
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    // Отключаем SSL, чтобы драйвер не тратил память на шифрование внутри сети Render
+    // Максимально простая строка подключения без SSL и лишних проверок
     connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
-                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;Trust Server Certificate=true;";
+                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;";
 }
 
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -33,7 +35,11 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new Exception("Строка подключения не найдена!");
 }
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+// Отключаем логирование SQL-запросов для экономии памяти
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString)
+           .LogTo(Console.WriteLine, LogLevel.Warning) // Логируем только ошибки
+);
 
 var app = builder.Build();
 
@@ -41,7 +47,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var retryCount = 10;
+    var retryCount = 5;
     while (retryCount > 0)
     {
         try
@@ -56,7 +62,7 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine($"Ошибка БД: {ex.Message}");
             retryCount--;
             if (retryCount == 0) throw;
-            Thread.Sleep(3000); // Ждем 3 секунды
+            Thread.Sleep(2000);
         }
     }
 }
