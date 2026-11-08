@@ -4,7 +4,7 @@ using wt_lab7_7postgres_efcore_valkovich.Models;
 using Npgsql;
 using System;
 
-// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ (для бесплатного Render 512MB) ---
+// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ ---
 AppContext.SetSwitch("System.GC.Server", false);
 AppContext.SetSwitch("System.GC.Concurrent", false);
 AppContext.SetSwitch("System.GC.HeapHardLimit", true);
@@ -24,7 +24,6 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    // Стандартная строка подключения (без GssEncryptionMode, так как его нет в Npgsql 8.0.0)
     connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
                        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;";
 }
@@ -44,9 +43,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(dataSource)
 );
 
+// --- 2. НАСТРОЙКА ПОРТА (ИСПРАВЛЕНО) ---
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 var app = builder.Build();
 
-// --- 2. Применение миграций с повторными попытками ---
+// --- 3. Применение миграций с повторными попытками ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -70,7 +73,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// --- 3. REST API ---
+// --- 4. REST API ---
 app.MapGet("/", () => "Minimal API работает!");
 app.MapGet("/api/info", () => new { Application = "Web Technologies", Version = "7.0" });
 
@@ -118,7 +121,7 @@ app.MapDelete("/api/books/{id}", async (int id, AppDbContext db) =>
     return Results.NoContent();
 });
 
-// --- 4. LINQ-запросы ---
+// --- 5. LINQ-запросы ---
 app.MapGet("/api/books/expensive", async (AppDbContext db) =>
     Results.Ok(await db.Books.Where(x => x.Price > 500).ToListAsync()));
 app.MapGet("/api/books/sorted", async (AppDbContext db) =>
@@ -128,6 +131,5 @@ app.MapGet("/api/books/available", async (AppDbContext db) =>
 app.MapGet("/api/search/by-author", async (string author, AppDbContext db) =>
     Results.Ok(await db.Books.Where(x => x.Author.ToLower().Contains(author.ToLower())).ToListAsync()));
 
-// --- 5. Запуск ---
-var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
-app.Run($"http://0.0.0.0:{port}");
+// --- 6. Запуск ---
+app.Run();
