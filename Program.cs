@@ -4,7 +4,7 @@ using wt_lab7_7postgres_efcore_valkovich.Models;
 using Npgsql;
 using System;
 
-// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ ---
+// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ (для бесплатного Render) ---
 AppContext.SetSwitch("System.GC.Server", false);
 AppContext.SetSwitch("System.GC.Concurrent", false);
 AppContext.SetSwitch("System.GC.HeapHardLimit", true);
@@ -24,7 +24,10 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+    // ИСПРАВЛЕНИЕ ОШИБКИ: Render не указывает порт в URL, поэтому используем 5432 по умолчанию
+    var dbPort = uri.Port > 0 ? uri.Port : 5432;
+
+    connectionString = $"Host={uri.Host};Port={dbPort};Database={uri.AbsolutePath.TrimStart('/')};" +
                        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;";
 }
 
@@ -33,7 +36,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new Exception("Строка подключения не найдена!");
 }
 
-// --- Ограничиваем пул соединений до 1 для экономии памяти ---
+// Ограничиваем пул соединений до 1 для экономии памяти
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.ConnectionStringBuilder.MaxPoolSize = 1;
 dataSourceBuilder.ConnectionStringBuilder.MinPoolSize = 1;
@@ -43,7 +46,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(dataSource)
 );
 
-// --- 2. НАСТРОЙКА ПОРТА (ИСПРАВЛЕНО) ---
+// --- 2. Настройка порта для Render ---
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
