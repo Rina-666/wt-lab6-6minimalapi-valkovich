@@ -4,7 +4,7 @@ using wt_lab7_7postgres_efcore_valkovich.Models;
 using Npgsql;
 using System;
 
-// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ ---
+// --- 0. ЖЕСТКАЯ ОПТИМИЗАЦИЯ ПАМЯТИ (для бесплатного Render 512MB) ---
 AppContext.SetSwitch("System.GC.Server", false);
 AppContext.SetSwitch("System.GC.Concurrent", false);
 AppContext.SetSwitch("System.GC.HeapHardLimit", true);
@@ -24,9 +24,9 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    // КРИТИЧЕСКИ ВАЖНО: GssEncryptionMode=Disable решает проблему падения на Linux-контейнере Render
+    // Стандартная строка подключения (без GssEncryptionMode, так как его нет в Npgsql 8.0.0)
     connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
-                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;GssEncryptionMode=Disable;";
+                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;";
 }
 
 if (string.IsNullOrWhiteSpace(connectionString))
