@@ -13,15 +13,16 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var databaseUrl = builder.Configuration["DATABASE_URL"];
 
-// Если мы на Render (есть DATABASE_URL), преобразуем её в строку подключения
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    // Render иногда передает URL с префиксом "postgres://", нужно заменить на "postgresql://"
-    // или распарсить вручную (что мы и делаем).
+    if (databaseUrl.StartsWith("postgres://"))
+    {
+        databaseUrl = databaseUrl.Replace("postgres://", "postgresql://");
+    }
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
     connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
-                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable";
+                       $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;Trust Server Certificate=true;";
 }
 
 // Проверка, что строка подключения не пустая
