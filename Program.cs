@@ -3,71 +3,70 @@ using wt_lab7_7postgres_efcore_valkovich.Data;
 using wt_lab7_7postgres_efcore_valkovich.Models;
 using System;
 
-// ПРИНУДИТЕЛЬНО ВКЛЮЧАЕМ РЕЖИМ WORKSTATION GC (для экономии памяти на Render)
+// --- 0. Оптимизация памяти для бесплатного тарифа Render ---
 AppContext.SetSwitch("System.GC.Server", false);
 AppContext.SetSwitch("System.GC.Concurrent", false);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. Настройка подключения (локально и на Render) ---
+// --- 1. Настройка подключения ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var databaseUrl = builder.Configuration["DATABASE_URL"];
 
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
+    // Исправляем префикс, если Render выдал его в формате postgres://
     if (databaseUrl.StartsWith("postgres://"))
     {
         databaseUrl = databaseUrl.Replace("postgres://", "postgresql://");
     }
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
+
+    // Отключаем SSL, чтобы драйвер не тратил память на шифрование внутри сети Render
     connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
                        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Disable;Trust Server Certificate=true;";
 }
 
-// Проверка, что строка подключения не пустая
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    throw new Exception("Строка подключения не найдена. Проверьте DATABASE_URL или appsettings.json");
+    throw new Exception("Строка подключения не найдена!");
 }
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 
-// --- 2. Автоматическое применение миграций при запуске (с повторными попытками) ---
+// --- 2. Применение миграций с повторными попытками ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var retryCount = 10; // Увеличили количество попыток
+    var retryCount = 10;
     while (retryCount > 0)
     {
         try
         {
             Console.WriteLine($"Попытка подключения к БД. Осталось попыток: {retryCount}");
-            db.Database.Migrate(); // Создает таблицы, если их нет
+            db.Database.Migrate();
             Console.WriteLine("Миграции успешно применены!");
-            break; // Если успешно - выходим из цикла
+            break;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка подключения к БД: {ex.Message}");
+            Console.WriteLine($"Ошибка БД: {ex.Message}");
             retryCount--;
-            if (retryCount == 0) throw; // Если попытки кончились - выбрасываем ошибку
-            Thread.Sleep(5000); // Ждем 5 секунд перед следующей попыткой
+            if (retryCount == 0) throw;
+            Thread.Sleep(3000); // Ждем 3 секунды
         }
     }
 }
 
-// --- 3. REST API (CRUD) ---
+// --- 3. REST API ---
 
-// Проверка работы
 app.MapGet("/", () => "Minimal API работает!");
-
-// Информация о приложении
 app.MapGet("/api/info", () => new { Application = "Web Technologies", Version = "7.0" });
 
-// GET: Все книги + поиск по названию
+// GET: Все книги + поиск
 app.MapGet("/api/books", async (string? search, AppDbContext db) =>
 {
     var query = db.Books.AsQueryable();
@@ -85,7 +84,7 @@ app.MapGet("/api/books/{id}", async (int id, AppDbContext db) =>
     return book == null ? Results.NotFound() : Results.Ok(book);
 });
 
-// POST: Создание книги
+// POST: Создание
 app.MapPost("/api/books", async (Book book, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(book.Title))
@@ -96,7 +95,7 @@ app.MapPost("/api/books", async (Book book, AppDbContext db) =>
     return Results.Created($"/api/books/{book.Id}", book);
 });
 
-// PUT: Обновление книги
+// PUT: Обновление
 app.MapPut("/api/books/{id}", async (int id, Book updatedBook, AppDbContext db) =>
 {
     var book = await db.Books.FirstOrDefaultAsync(x => x.Id == id);
@@ -111,7 +110,7 @@ app.MapPut("/api/books/{id}", async (int id, Book updatedBook, AppDbContext db) 
     return Results.Ok(book);
 });
 
-// DELETE: Удаление книги
+// DELETE: Удаление
 app.MapDelete("/api/books/{id}", async (int id, AppDbContext db) =>
 {
     var book = await db.Books.FirstOrDefaultAsync(x => x.Id == id);
@@ -122,24 +121,19 @@ app.MapDelete("/api/books/{id}", async (int id, AppDbContext db) =>
     return Results.NoContent();
 });
 
-// --- 4. LINQ-запросы (для Блока 5) ---
+// --- 4. LINQ-запросы ---
 
-// Фильтрация по цене
 app.MapGet("/api/books/expensive", async (AppDbContext db) =>
     Results.Ok(await db.Books.Where(x => x.Price > 500).ToListAsync()));
 
-// Сортировка по цене
 app.MapGet("/api/books/sorted", async (AppDbContext db) =>
     Results.Ok(await db.Books.OrderBy(x => x.Price).ToListAsync()));
 
-// Выборка с условием
 app.MapGet("/api/books/available", async (AppDbContext db) =>
     Results.Ok(await db.Books.Where(x => x.IsAvailable).OrderBy(x => x.Title).ToListAsync()));
 
-// Собственный запрос: поиск по автору
 app.MapGet("/api/search/by-author", async (string author, AppDbContext db) =>
     Results.Ok(await db.Books.Where(x => x.Author.ToLower().Contains(author.ToLower())).ToListAsync()));
-
 
 // --- 5. Запуск ---
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
